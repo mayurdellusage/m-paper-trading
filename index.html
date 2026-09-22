@@ -100,6 +100,7 @@ header{
 .status.reconnecting .dot{background:var(--amber);animation:blink 1s infinite;}
 .status.offline .dot{background:var(--short);}
 @keyframes blink{50%{opacity:.25;}}
+.status .fresh{color:var(--text-faint);font-weight:500;}
 
 .chart-col{
   background:var(--bg-1);
@@ -107,8 +108,22 @@ header{
   flex-direction:column;
   min-width:0;
   min-height:0;
+  position:relative;
 }
-#price-chart{flex:1;min-height:0;}
+#price-chart{flex:1;min-height:0;cursor:crosshair;}
+#price-chart.picking{cursor:copy;}
+.chart-pnl-badge{
+  position:absolute;top:10px;left:10px;z-index:5;
+  background:rgba(15,20,28,.9);border:1px solid var(--line);border-radius:var(--radius);
+  padding:7px 10px;font-family:var(--mono);font-size:12px;font-weight:600;
+  pointer-events:none;display:none;backdrop-filter:blur(2px);
+}
+.chart-pnl-badge .lbl{color:var(--text-faint);font-weight:500;margin-right:6px;font-family:var(--sans);}
+.pick-hint{
+  position:absolute;top:10px;right:10px;z-index:5;
+  background:rgba(232,163,61,.15);border:1px solid var(--amber);color:var(--amber);
+  padding:6px 10px;border-radius:var(--radius);font-size:11.5px;font-weight:700;display:none;
+}
 
 .side-col{
   background:var(--bg-1);
@@ -250,10 +265,12 @@ tbody tr:hover{background:var(--bg-2);}
       <button data-tf="4h">4H</button>
       <button data-tf="1d">1D</button>
     </div>
-    <div class="status offline" id="wsStatus"><span class="dot"></span><span id="wsStatusText">OFFLINE</span></div>
+    <div class="status offline" id="wsStatus"><span class="dot"></span><span id="wsStatusText">OFFLINE</span><span class="fresh" id="wsFresh"></span></div>
   </header>
 
   <div class="chart-col">
+    <div class="chart-pnl-badge" id="chartPnlBadge"><span class="lbl">Open P&amp;L</span><span id="chartPnlValue">—</span></div>
+    <div class="pick-hint" id="pickHint">Click a price on the chart to set it</div>
     <div id="price-chart"></div>
   </div>
 
@@ -299,14 +316,15 @@ tbody tr:hover{background:var(--bg-2);}
 
         <div class="row2">
           <div class="field">
-            <label>Stop Loss</label>
+            <label>Stop Loss <span class="hint" id="pickSlBtn" title="Click a price on the chart">pick on chart</span></label>
             <input type="number" id="slInput" step="0.01" placeholder="optional">
           </div>
           <div class="field">
-            <label>Take Profit</label>
+            <label>Take Profit <span class="hint" id="pickTpBtn" title="Click a price on the chart">pick on chart</span></label>
             <input type="number" id="tpInput" step="0.01" placeholder="optional">
           </div>
         </div>
+        <div class="warn" id="dragHint" style="color:var(--text-faint);"></div>
 
         <div class="calc-list">
           <div class="r"><span class="dim">Entry (est.)</span><span class="v mono" id="calcEntry">—</span></div>
@@ -532,10 +550,18 @@ async function refreshChart(){
 }
 
 /* ================= WEBSOCKET ================= */
+// Connections are tracked by generation number rather than a shared "was this
+// intentional" flag: every connectWS() call bumps wsGen, and each socket's
+// handlers close over the generation they were created with. A stale socket's
+// close/error events are ignored once a newer generation exists, which avoids
+// races when switching symbol/timeframe quickly (the old bug: a shared
+// boolean flag could suppress a *legitimate* reconnect of the new socket).
 let ws = null;
+let wsGen = 0;
 let wsReconnectDelay = 1000;
 let wsReconnectTimer = null;
-let wsIntentionalClose = false;
+let lastKlineTs = 0;
+let lastTickerTs = 0;
 
 function setStatus(state, text){
   const el = document.getElementById("wsStatus");
@@ -551,37 +577,43 @@ function buildStreams(){
 }
 
 function connectWS(){
-  wsIntentionalClose = false;
-  if(ws){ try{ wsIntentionalClose = true; ws.close(); }catch(e){} }
+  const myGen = ++wsGen;
+  if(ws){ try{ ws.close(); }catch(e){} }
   setStatus("reconnecting","CONNECTING");
   const url = WS_BASE + buildStreams().join("/");
-  ws = new WebSocket(url);
+  const socket = new WebSocket(url);
+  ws = socket;
 
-  ws.onopen = ()=>{
+  socket.onopen = ()=>{
+    if(myGen !== wsGen) return;
     wsReconnectDelay = 1000;
     setStatus("live","LIVE");
   };
-  ws.onmessage = (evt)=>{
+  socket.onmessage = (evt)=>{
+    if(myGen !== wsGen) return;
     let msg;
     try{ msg = JSON.parse(evt.data); }catch(e){ return; }
     if(!msg || !msg.stream || !msg.data) return;
-    if(msg.stream.endsWith("@bookTicker")){
-      handleBookTicker(msg.data);
-    }else if(msg.stream.includes("@kline_")){
-      handleKline(msg.data);
-    }
+    try{
+      if(msg.stream.endsWith("@bookTicker")){
+        handleBookTicker(msg.data);
+      }else if(msg.stream.includes("@kline_")){
+        handleKline(msg.data);
+      }
+    }catch(err){ console.error("WS message handling error:", err); }
   };
-  ws.onclose = ()=>{
-    if(wsIntentionalClose) return; // we closed it ourselves (symbol/tf switch) — a fresh connect follows immediately
+  socket.onclose = ()=>{
+    if(myGen !== wsGen) return; // superseded by a newer connection — nothing to do
     setStatus("reconnecting","RECONNECTING");
-    scheduleReconnect();
+    scheduleReconnect(myGen);
   };
-  ws.onerror = ()=>{ try{ ws.close(); }catch(e){} };
+  socket.onerror = ()=>{ try{ socket.close(); }catch(e){} };
 }
 
-function scheduleReconnect(){
+function scheduleReconnect(myGen){
   clearTimeout(wsReconnectTimer);
   wsReconnectTimer = setTimeout(()=>{
+    if(myGen !== wsGen) return;
     wsReconnectDelay = Math.min(wsReconnectDelay*1.6, 20000);
     connectWS();
   }, wsReconnectDelay);
@@ -595,6 +627,7 @@ function handleBookTicker(d){
   market[symbol].bid = bid;
   market[symbol].ask = ask;
   market[symbol].last = (bid+ask)/2;
+  lastTickerTs = Date.now();
   checkSlTp(symbol);
   if(symbol === ui.symbol) updatePriceStrip();
   updateAccountAndPositions();
@@ -602,14 +635,28 @@ function handleBookTicker(d){
 
 function handleKline(d){
   const k = d.k;
-  if(d.s !== ui.symbol) return;
+  // Guard against stray messages from a timeframe/symbol we've since switched
+  // away from (the previous version only checked symbol, not interval —
+  // a late message from the old interval could otherwise be plotted with a
+  // mismatched timestamp and silently fail to render as a moving candle).
+  if(d.s !== ui.symbol || k.i !== ui.tf) return;
   const bar = {
     time: Math.floor(k.t/1000),
     open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c)
   };
+  if([bar.open,bar.high,bar.low,bar.close].some(v=>isNaN(v))) return;
   candleSeries.update(bar);
-  volumeSeries.update({ time:bar.time, value: parseFloat(k.v), color: bar.close>=bar.open ? "rgba(61,220,151,.35)" : "rgba(255,92,108,.35)" });
+  volumeSeries.update({ time:bar.time, value: parseFloat(k.v)||0, color: bar.close>=bar.open ? "rgba(61,220,151,.35)" : "rgba(255,92,108,.35)" });
+  lastKlineTs = Date.now();
 }
+
+setInterval(()=>{
+  const el = document.getElementById("wsFresh");
+  if(!el) return;
+  if(!lastKlineTs){ el.textContent = ""; return; }
+  const secs = Math.round((Date.now()-lastKlineTs)/1000);
+  el.textContent = secs < 2 ? "· candle live" : `· candle updated ${secs}s ago`;
+}, 1000);
 
 /* ================= FORMATTING ================= */
 function fmtPrice(symbol, v){
@@ -634,6 +681,10 @@ function fmtPct(v){
 function roundToStep(value, step){
   if(!step) return value;
   return Math.round(value/step) * step;
+}
+function roundPrice(symbol, v){
+  const p = (symbolMeta[symbol]||{}).pricePrecision ?? 2;
+  return parseFloat(Number(v).toFixed(p));
 }
 
 /* ================= PAPER TRADING ENGINE ================= */
@@ -737,6 +788,7 @@ function refreshOrderPreview(){
     btn.disabled = false;
     warn.textContent = "";
   }
+  updatePreviewLines();
   return p;
 }
 
@@ -856,9 +908,115 @@ function drawOrderLinesForCurrentSymbol(){
   const pos = account.positions[ui.symbol];
   if(!pos) return;
   entryLine = candleSeries.createPriceLine({ price:pos.entry, color:"#8792a3", lineWidth:1, lineStyle:2, axisLabelVisible:true, title:"entry" });
-  if(pos.sl!=null) slLine = candleSeries.createPriceLine({ price:pos.sl, color:"#ff5c6c", lineWidth:1, lineStyle:2, axisLabelVisible:true, title:"SL" });
-  if(pos.tp!=null) tpLine = candleSeries.createPriceLine({ price:pos.tp, color:"#3ddc97", lineWidth:1, lineStyle:2, axisLabelVisible:true, title:"TP" });
+  if(pos.sl!=null) slLine = candleSeries.createPriceLine({ price:pos.sl, color:"#ff5c6c", lineWidth:2, lineStyle:2, axisLabelVisible:true, title:"SL (drag to move)" });
+  if(pos.tp!=null) tpLine = candleSeries.createPriceLine({ price:pos.tp, color:"#3ddc97", lineWidth:2, lineStyle:2, axisLabelVisible:true, title:"TP (drag to move)" });
+  updateLivePositionLine();
 }
+
+// Updates the entry line's label with live $ / % P&L, without recreating the
+// line (createPriceLine/removePriceLine on every tick would be wasteful —
+// IPriceLine.applyOptions() mutates it in place).
+function updateLivePositionLine(){
+  const pos = account.positions[ui.symbol];
+  if(!pos || !entryLine) return;
+  const pnl = unrealizedPnl(ui.symbol);
+  const pct = pos.margin>0 ? (pnl/pos.margin*100) : 0;
+  entryLine.applyOptions({ title: `entry · ${fmtUsd(pnl)} (${fmtPct(pct)})` });
+}
+
+function updateChartPnlBadge(){
+  const badge = document.getElementById("chartPnlBadge");
+  const valEl = document.getElementById("chartPnlValue");
+  const pos = account.positions[ui.symbol];
+  if(!pos){ badge.style.display = "none"; return; }
+  const pnl = unrealizedPnl(ui.symbol);
+  const pct = pos.margin>0 ? (pnl/pos.margin*100) : 0;
+  valEl.textContent = `${fmtUsd(pnl)} (${fmtPct(pct)}) · ${pos.side} ${pos.leverage}x`;
+  valEl.className = pnl>=0 ? "up" : "down";
+  badge.style.display = "block";
+}
+
+// Dashed preview lines for the SL/TP the trader is composing, shown only
+// while there's no live position yet on this symbol (once a position opens,
+// the real draggable SL/TP lines above take over).
+let previewSlLine=null, previewTpLine=null;
+function updatePreviewLines(){
+  if(previewSlLine){ candleSeries.removePriceLine(previewSlLine); previewSlLine=null; }
+  if(previewTpLine){ candleSeries.removePriceLine(previewTpLine); previewTpLine=null; }
+  if(account.positions[ui.symbol]) return; // real lines are shown instead
+  const sl = parseFloat(document.getElementById("slInput").value);
+  const tp = parseFloat(document.getElementById("tpInput").value);
+  if(sl>0) previewSlLine = candleSeries.createPriceLine({ price:sl, color:"#ff5c6c", lineWidth:1, lineStyle:3, axisLabelVisible:true, title:"SL (pending)" });
+  if(tp>0) previewTpLine = candleSeries.createPriceLine({ price:tp, color:"#3ddc97", lineWidth:1, lineStyle:3, axisLabelVisible:true, title:"TP (pending)" });
+}
+
+/* ---- pick-on-chart & drag-to-adjust interaction ---- */
+let pickMode = null;    // 'sl' | 'tp' | null — armed via the "pick on chart" links
+let dragTarget = null;  // 'sl' | 'tp' | null — set while dragging a live position's line
+
+function setPickMode(mode){
+  pickMode = mode;
+  document.getElementById("pickHint").style.display = mode ? "block" : "none";
+  chartEl.classList.toggle("picking", !!mode);
+}
+
+chartEl.addEventListener("mousedown",(e)=>{
+  const pos = account.positions[ui.symbol];
+  if(!pos) return;
+  const rect = chartEl.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const HIT = 6;
+  if(pos.sl!=null){
+    const slY = candleSeries.priceToCoordinate(pos.sl);
+    if(slY!=null && Math.abs(slY-y)<=HIT){ dragTarget="sl"; e.preventDefault(); return; }
+  }
+  if(pos.tp!=null){
+    const tpY = candleSeries.priceToCoordinate(pos.tp);
+    if(tpY!=null && Math.abs(tpY-y)<=HIT){ dragTarget="tp"; e.preventDefault(); return; }
+  }
+});
+
+chartEl.addEventListener("mousemove",(e)=>{
+  const rect = chartEl.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  if(dragTarget){
+    const price = candleSeries.coordinateToPrice(y);
+    if(price==null) return;
+    const pos = account.positions[ui.symbol];
+    if(!pos) { dragTarget=null; return; }
+    const rounded = roundPrice(ui.symbol, price);
+    if(dragTarget==="sl") pos.sl = rounded; else pos.tp = rounded;
+    drawOrderLinesForCurrentSymbol();
+    return;
+  }
+  // hover feedback so it's discoverable that lines are draggable
+  const pos = account.positions[ui.symbol];
+  if(!pos){ chartEl.style.cursor = pickMode ? "copy" : "crosshair"; return; }
+  const HIT = 6;
+  let overLine = false;
+  if(pos.sl!=null){ const yy=candleSeries.priceToCoordinate(pos.sl); if(yy!=null && Math.abs(yy-y)<=HIT) overLine=true; }
+  if(pos.tp!=null){ const yy=candleSeries.priceToCoordinate(pos.tp); if(yy!=null && Math.abs(yy-y)<=HIT) overLine=true; }
+  chartEl.style.cursor = overLine ? "ns-resize" : (pickMode ? "copy" : "crosshair");
+});
+
+window.addEventListener("mouseup",()=>{
+  if(!dragTarget) return;
+  dragTarget = null;
+  saveState();
+  updateAll();
+});
+
+chartEl.addEventListener("click",(e)=>{
+  if(!pickMode || dragTarget) return;
+  const rect = chartEl.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const price = candleSeries.coordinateToPrice(y);
+  if(price==null) return;
+  const rounded = roundPrice(ui.symbol, price);
+  document.getElementById(pickMode==="sl" ? "slInput" : "tpInput").value = rounded;
+  setPickMode(null);
+  refreshOrderPreview();
+});
 
 /* ================= RENDERING ================= */
 function updatePriceStrip(){
@@ -965,6 +1123,8 @@ function sampleEquity(force){
 function updateAccountAndPositions(){
   updateAccountPanel();
   updatePositionsTable();
+  updateLivePositionLine();
+  updateChartPnlBadge();
   sampleEquity(false);
 }
 
@@ -981,6 +1141,7 @@ document.getElementById("symbolTabs").addEventListener("click", async (e)=>{
   const btn = e.target.closest("button[data-symbol]");
   if(!btn) return;
   ui.symbol = btn.dataset.symbol;
+  setPickMode(null);
   document.querySelectorAll("#symbolTabs button").forEach(b=>b.classList.toggle("active", b===btn));
   await refreshChart();
   connectWS();
@@ -990,6 +1151,7 @@ document.getElementById("tfTabs").addEventListener("click", async (e)=>{
   const btn = e.target.closest("button[data-tf]");
   if(!btn) return;
   ui.tf = btn.dataset.tf;
+  setPickMode(null);
   document.querySelectorAll("#tfTabs button").forEach(b=>b.classList.toggle("active", b===btn));
   await refreshChart();
   connectWS();
@@ -1012,6 +1174,9 @@ document.getElementById("levSlider").addEventListener("input",(e)=>{
 });
 document.getElementById("applyRisk").addEventListener("click", applyRiskSizing);
 document.getElementById("submitOrder").addEventListener("click", placeOrder);
+document.getElementById("pickSlBtn").addEventListener("click", ()=> setPickMode(pickMode==="sl" ? null : "sl"));
+document.getElementById("pickTpBtn").addEventListener("click", ()=> setPickMode(pickMode==="tp" ? null : "tp"));
+document.getElementById("dragHint").textContent = "Tip: once a trade is open, drag its SL/TP lines on the chart to adjust them.";
 
 document.getElementById("positionsBody").addEventListener("click",(e)=>{
   const btn = e.target.closest("button[data-act]");

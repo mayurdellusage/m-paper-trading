@@ -29,6 +29,29 @@
   --radius:3px;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --sans:'Manrope',system-ui,sans-serif;
+  --chart-grid:#151c27;
+  --chart-border:#232d3b;
+  --chart-text:#8792a3;
+}
+html.theme-light{
+  --bg-0:#f4f6f9;
+  --bg-1:#ffffff;
+  --bg-2:#f0f3f7;
+  --bg-3:#e6ebf2;
+  --line:#d0d7e2;
+  --line-soft:#e2e8f0;
+  --text:#1a2332;
+  --text-dim:#5a677a;
+  --text-faint:#8a96a8;
+  --long:#0d9f6e;
+  --long-dim:#a8e6cf;
+  --short:#e11d48;
+  --short-dim:#fecdd3;
+  --amber:#c27803;
+  --focus:#3b6fd9;
+  --chart-grid:#e8edf4;
+  --chart-border:#d0d7e2;
+  --chart-text:#5a677a;
 }
 *{box-sizing:border-box;}
 html,body{height:100%;}
@@ -44,6 +67,7 @@ body{
 button, input, select{font-family:inherit;font-size:inherit;color:inherit;}
 button{cursor:pointer;}
 ::selection{background:#2a3a55;}
+html.theme-light ::selection{background:#c5d4f0;}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
 .up{color:var(--long);}
 .down{color:var(--short);}
@@ -53,7 +77,7 @@ button{cursor:pointer;}
 /* ---------- layout ---------- */
 #app{
   display:grid;
-  grid-template-rows:44px 1fr 190px;
+  grid-template-rows:44px 1fr var(--bottom-h, 190px);
   grid-template-columns:1fr 300px;
   height:100vh;
   gap:1px;
@@ -64,9 +88,11 @@ header{
   background:var(--bg-1);
   display:flex;
   align-items:center;
-  gap:18px;
+  gap:14px;
   padding:0 14px;
   border-bottom:1px solid var(--line);
+  flex-wrap:wrap;
+  min-height:44px;
 }
 .brand{
   font-weight:800;
@@ -86,11 +112,18 @@ header{
   transition:background .12s,color .12s;
 }
 .symbol-tabs button.active{background:var(--bg-3);color:var(--text);}
-.price-strip{display:flex;align-items:baseline;gap:10px;}
+.price-strip{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 .price-strip .last{font-family:var(--mono);font-size:18px;font-weight:600;}
 .price-strip .chg{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 6px;border-radius:2px;}
 .price-strip .chg.up{background:rgba(61,220,151,.12);}
 .price-strip .chg.down{background:rgba(255,92,108,.12);}
+html.theme-light .price-strip .chg.up{background:rgba(13,159,110,.12);}
+html.theme-light .price-strip .chg.down{background:rgba(225,29,72,.12);}
+.candle-timer{
+  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-dim);
+  padding:2px 7px;border-radius:2px;background:var(--bg-2);border:1px solid var(--line-soft);
+  white-space:nowrap;
+}
 .tf-tabs{display:flex;gap:2px;margin-left:auto;background:var(--bg-2);border-radius:var(--radius);padding:2px;}
 .tf-tabs button{background:transparent;border:none;color:var(--text-dim);padding:6px 10px;border-radius:2px;font-size:12px;font-weight:600;}
 .tf-tabs button.active{background:var(--bg-3);color:var(--text);}
@@ -108,21 +141,27 @@ header{
   color:var(--text);padding:6px 8px;font-size:12px;font-weight:600;max-width:150px;
 }
 .acct-switch select:focus{outline:none;border-color:var(--focus);}
-.acct-switch button{
+.acct-switch button, .theme-btn{
   background:var(--bg-2);border:1px solid var(--line);color:var(--text-dim);
   padding:6px 9px;border-radius:var(--radius);font-size:11.5px;font-weight:700;white-space:nowrap;
 }
-.acct-switch button:hover{color:var(--text);border-color:var(--focus);}
+.acct-switch button:hover, .theme-btn:hover{color:var(--text);border-color:var(--focus);}
 
 /* modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(5,8,12,.72);display:none;align-items:center;justify-content:center;z-index:100;}
-.modal{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:18px;width:300px;box-shadow:0 12px 40px rgba(0,0,0,.5);}
+html.theme-light .modal-overlay{background:rgba(20,30,50,.45);}
+.modal{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:18px;width:340px;max-width:94vw;box-shadow:0 12px 40px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;}
 .modal h3{margin:0 0 14px;font-size:14px;font-weight:800;}
 .modal .field label{font-size:10.5px;color:var(--text-faint);}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
 .modal-actions .mini-btn{padding:7px 12px;}
 .modal-actions .submit-btn{width:auto;padding:8px 16px;margin-top:0;}
 .modal .row2{grid-template-columns:1fr 1fr;}
+.fee-opts{display:none;margin-top:6px;padding:8px;background:var(--bg-1);border:1px solid var(--line-soft);border-radius:var(--radius);}
+.fee-opts.open{display:block;}
+.fee-opts .row2{margin-bottom:0;}
+.check-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;}
+.check-row input{accent-color:var(--amber);}
 
 .chart-col{
   background:var(--bg-1);
@@ -140,26 +179,13 @@ header{
   padding:7px 10px;font-family:var(--mono);font-size:12px;font-weight:600;
   pointer-events:none;display:none;backdrop-filter:blur(2px);
 }
+html.theme-light .chart-pnl-badge{background:rgba(255,255,255,.92);}
 .chart-pnl-badge .lbl{color:var(--text-faint);font-weight:500;margin-right:6px;font-family:var(--sans);}
 .pick-hint{
   position:absolute;top:10px;right:10px;z-index:5;
   background:rgba(232,163,61,.15);border:1px solid var(--amber);color:var(--amber);
   padding:6px 10px;border-radius:var(--radius);font-size:11.5px;font-weight:700;display:none;
 }
-.chart-trade-btns{
-  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
-  z-index:5;display:flex;gap:8px;
-}
-.chart-trade-btns button{
-  padding:9px 22px;border:1px solid var(--line);border-radius:var(--radius);
-  font-weight:800;font-size:12.5px;letter-spacing:.3px;
-  background:rgba(15,20,28,.88);backdrop-filter:blur(2px);
-  box-shadow:0 4px 14px rgba(0,0,0,.35);
-}
-.chart-trade-btns button[data-side="LONG"]{color:var(--long);border-color:var(--long-dim);}
-.chart-trade-btns button[data-side="LONG"]:hover{background:rgba(61,220,151,.16);}
-.chart-trade-btns button[data-side="SHORT"]{color:var(--short);border-color:var(--short-dim);}
-.chart-trade-btns button[data-side="SHORT"]:hover{background:rgba(255,92,108,.16);}
 
 .side-col{
   background:var(--bg-1);
@@ -181,7 +207,6 @@ section.panel{background:var(--bg-2);border:1px solid var(--line-soft);border-ra
 
 /* account grid */
 .acct-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
-.acct-item{}
 .acct-item .k{font-size:10.5px;color:var(--text-faint);margin-bottom:2px;}
 .acct-item .v{font-family:var(--mono);font-size:13.5px;font-weight:600;}
 .acct-item .v.wide{grid-column:1/3;font-size:16px;}
@@ -195,15 +220,18 @@ section.panel{background:var(--bg-2);border:1px solid var(--line-soft);border-ra
 }
 .side-toggle button[data-side="LONG"].active{background:rgba(61,220,151,.13);border-color:var(--long-dim);color:var(--long);}
 .side-toggle button[data-side="SHORT"].active{background:rgba(255,92,108,.13);border-color:var(--short-dim);color:var(--short);}
+html.theme-light .side-toggle button[data-side="LONG"].active{background:rgba(13,159,110,.12);}
+html.theme-light .side-toggle button[data-side="SHORT"].active{background:rgba(225,29,72,.12);}
 
 .field{margin-bottom:9px;}
 .field label{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-faint);margin-bottom:4px;}
 .field label .hint{color:var(--text-dim);cursor:pointer;}
-.field input[type=number], .field input[type=text]{
+.field input[type=number], .field input[type=text], .field select{
   width:100%;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius);
   color:var(--text);padding:7px 8px;font-family:var(--mono);font-size:12.5px;
 }
-.field input:focus{outline:none;border-color:var(--focus);}
+.field select{font-family:var(--sans);font-weight:600;}
+.field input:focus, .field select:focus{outline:none;border-color:var(--focus);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .lev-row{display:flex;align-items:center;gap:8px;}
 .lev-row input[type=range]{flex:1;accent-color:var(--amber);}
@@ -230,23 +258,30 @@ section.panel{background:var(--bg-2);border:1px solid var(--line-soft);border-ra
   display:flex;
   flex-direction:column;
   min-height:0;
+  position:relative;
 }
-.tabbar{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--line-soft);}
+.resize-handle{
+  position:absolute;top:0;left:0;right:0;height:6px;cursor:ns-resize;z-index:10;
+  background:transparent;
+}
+.resize-handle:hover, .resize-handle.dragging{background:var(--focus);opacity:.35;}
+.tabbar{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line-soft);align-items:center;}
 .tabbar button{
   background:transparent;border:none;color:var(--text-dim);padding:7px 14px;font-weight:700;font-size:12px;
   border-bottom:2px solid transparent;
 }
 .tabbar button.active{color:var(--text);border-color:var(--amber);}
 .tabbar .spacer{flex:1;}
-.tabbar .tools{display:flex;gap:6px;align-items:center;padding-right:4px;}
-.tools button{
+.tabbar .tools{display:flex;gap:6px;align-items:center;padding-right:4px;flex-wrap:wrap;}
+.tools button, .eq-tools button{
   background:var(--bg-2);border:1px solid var(--line);color:var(--text-dim);
   padding:5px 9px;border-radius:var(--radius);font-size:10.5px;font-weight:600;
 }
-.tools button:hover{color:var(--text);border-color:var(--focus);}
+.tools button:hover, .eq-tools button:hover{color:var(--text);border-color:var(--focus);}
+.tools button.active, .eq-tools button.active{color:var(--text);border-color:var(--amber);background:var(--bg-3);}
 .tools input[type=file]{display:none;}
 
-.tab-view{flex:1;overflow:auto;padding:0 10px;}
+.tab-view{flex:1;overflow:auto;padding:0 10px;min-height:0;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 thead th{
   position:sticky;top:0;background:var(--bg-1);
@@ -259,20 +294,25 @@ tbody tr:hover{background:var(--bg-2);}
 .pill{display:inline-block;padding:1px 7px;border-radius:2px;font-weight:700;font-size:10.5px;}
 .pill.LONG{background:rgba(61,220,151,.14);color:var(--long);}
 .pill.SHORT{background:rgba(255,92,108,.14);color:var(--short);}
+html.theme-light .pill.LONG{background:rgba(13,159,110,.14);}
+html.theme-light .pill.SHORT{background:rgba(225,29,72,.14);}
 .mini-btn{background:var(--bg-3);border:1px solid var(--line);color:var(--text-dim);border-radius:2px;padding:3px 8px;font-size:10.5px;font-weight:600;margin-left:4px;}
 .mini-btn:hover{color:var(--text);border-color:var(--focus);}
 .mini-btn.danger:hover{color:var(--short);border-color:var(--short-dim);}
 .empty-row td{text-align:center;color:var(--text-faint);padding:26px 0;font-family:var(--sans);}
 
-#equity-chart{width:220px;}
-.eq-head-val{font-family:var(--mono);}
+.eq-toolbar{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0 8px;
+}
+.eq-toolbar .label{font-size:11px;color:var(--text-faint);font-weight:600;}
+#equity-chart{width:100%;height:calc(100% - 40px);min-height:120px;}
 
 ::-webkit-scrollbar{width:9px;height:9px;}
 ::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 
 @media (max-width:880px){
-  #app{grid-template-columns:1fr;grid-template-rows:auto auto auto 200px;}
+  #app{grid-template-columns:1fr;grid-template-rows:auto auto auto var(--bottom-h, 200px);}
   .side-col{border-left:none;border-top:1px solid var(--line);}
   header{flex-wrap:wrap;height:auto;padding:8px 10px;}
   .tf-tabs{margin-left:0;}
@@ -292,6 +332,7 @@ tbody tr:hover{background:var(--bg-2);}
     <div class="price-strip">
       <span class="last mono" id="lastPrice">—</span>
       <span class="chg mono" id="priceChg">—</span>
+      <span class="candle-timer mono" id="candleTimer" title="Time until current candle closes">—</span>
     </div>
     <div class="tf-tabs" id="tfTabs">
       <button data-tf="1m">1m</button>
@@ -304,6 +345,7 @@ tbody tr:hover{background:var(--bg-2);}
     <div class="acct-switch">
       <select id="acctSelect" title="Paper trading account"></select>
       <button id="newAcctBtn">+ New account</button>
+      <button class="theme-btn" id="themeBtn" title="Toggle light/dark theme">Theme</button>
     </div>
     <div class="status offline" id="wsStatus"><span class="dot"></span><span id="wsStatusText">OFFLINE</span><span class="fresh" id="wsFresh"></span></div>
   </header>
@@ -312,10 +354,6 @@ tbody tr:hover{background:var(--bg-2);}
     <div class="chart-pnl-badge" id="chartPnlBadge"><span class="lbl">Open P&amp;L</span><span id="chartPnlValue">—</span></div>
     <div class="pick-hint" id="pickHint">Click a price on the chart to set it</div>
     <div id="price-chart"></div>
-    <div class="chart-trade-btns" id="chartTradeBtns">
-      <button data-side="LONG" id="chartBuyBtn">BUY / LONG</button>
-      <button data-side="SHORT" id="chartSellBtn">SELL / SHORT</button>
-    </div>
   </div>
 
   <div class="side-col">
@@ -376,6 +414,7 @@ tbody tr:hover{background:var(--bg-2);}
           <div class="r"><span class="dim">Margin required</span><span class="v mono" id="calcMargin">—</span></div>
           <div class="r"><span class="dim">Est. liquidation</span><span class="v mono" id="calcLiq">—</span></div>
           <div class="r"><span class="dim">Risk / R:R</span><span class="v mono" id="calcRR">—</span></div>
+          <div class="r"><span class="dim">Est. fee</span><span class="v mono" id="calcFee">—</span></div>
         </div>
 
         <button class="submit-btn LONG" id="submitOrder">OPEN LONG</button>
@@ -384,11 +423,12 @@ tbody tr:hover{background:var(--bg-2);}
     </section>
   </div>
 
-  <div class="bottom-col">
+  <div class="bottom-col" id="bottomCol">
+    <div class="resize-handle" id="resizeHandle" title="Drag to resize panel"></div>
     <div class="tabbar">
-      <button data-tab="positions" class="active">Positions</button>
-      <button data-tab="history">History</button>
-      <button data-tab="equity">Equity Curve</button>
+      <button data-tab="positions" class="active" id="tabPositions">Positions</button>
+      <button data-tab="history" id="tabHistory">History</button>
+      <button data-tab="equity" id="tabEquity">Equity Curve</button>
       <div class="spacer"></div>
       <div class="tools">
         <button id="exportCsvBtn">Export CSV</button>
@@ -418,8 +458,21 @@ tbody tr:hover{background:var(--bg-2);}
       </table>
     </div>
 
-    <div class="tab-view" id="view-equity" style="display:none;padding-top:10px;">
-      <div id="equity-chart" style="width:100%;height:150px;"></div>
+    <div class="tab-view" id="view-equity" style="display:none;padding-top:6px;display:none;flex-direction:column;">
+      <div class="eq-toolbar">
+        <span class="label">Type</span>
+        <div class="eq-tools" id="eqTypeTools">
+          <button data-eqtype="area" class="active">Area</button>
+          <button data-eqtype="line">Line</button>
+          <button data-eqtype="candle">Candles</button>
+        </div>
+        <span class="label" style="margin-left:8px;">Source</span>
+        <div class="eq-tools" id="eqSourceTools">
+          <button data-eqsrc="live" class="active">Live equity</button>
+          <button data-eqsrc="closed">Closed trades</button>
+        </div>
+      </div>
+      <div id="equity-chart"></div>
     </div>
   </div>
 
@@ -431,7 +484,46 @@ tbody tr:hover{background:var(--bg-2);}
     <div class="field"><label>Account name</label><input type="text" id="newAcctName" placeholder="e.g. Scalping BTC"></div>
     <div class="row2">
       <div class="field"><label>Starting balance</label><input type="number" id="newAcctBalance" value="100000" min="1" step="100"></div>
-      <div class="field"><label>Currency symbol</label><input type="text" id="newAcctCurrency" value="$" maxlength="4"></div>
+      <div class="field">
+        <label>Currency symbol</label>
+        <select id="newAcctCurrency">
+          <option value="$">$ — USD</option>
+          <option value="€">€ — EUR</option>
+          <option value="£">£ — GBP</option>
+          <option value="¥">¥ — JPY/CNY</option>
+          <option value="₹">₹ — INR</option>
+          <option value="₩">₩ — KRW</option>
+          <option value="A$">A$ — AUD</option>
+          <option value="C$">C$ — CAD</option>
+          <option value="₣">₣ — CHF-style</option>
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="newAcctFeeEnable">
+      <label for="newAcctFeeEnable" style="cursor:pointer;">Enable brokerage / trading fees</label>
+    </div>
+    <div class="fee-opts" id="feeOpts">
+      <div class="row2">
+        <div class="field">
+          <label>Fee type</label>
+          <select id="newAcctFeeType">
+            <option value="percent">Percent (%)</option>
+            <option value="fixed">Fixed amount</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="feeValueLabel">Fee rate (%)</label>
+          <input type="number" id="newAcctFeeValue" value="0.04" min="0" step="0.001" placeholder="0.04">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label style="color:var(--text-dim);font-size:10.5px;">
+          Percent is of notional (e.g. 0.04 = 4 bps). Fixed is charged per open + close in account currency.
+        </label>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="mini-btn" id="newAcctCancel">Cancel</button>
@@ -451,26 +543,46 @@ const SYMBOLS = ["BTCUSDT","ETHUSDT"];
 const TF_MS = {"1m":60e3,"5m":300e3,"15m":900e3,"1h":3600e3,"4h":14400e3,"1d":86400e3};
 const DEFAULT_STARTING_BALANCE = 100000;
 
-// Multi-account storage. Each account is saved under its own key so switching
-// accounts never touches another account's data; an index lists them for the
-// account-switcher dropdown.
 const ACCOUNTS_INDEX_KEY = "paperExchange.accountsIndex.v2";
 const ACTIVE_ACCOUNT_KEY = "paperExchange.activeAccountId.v2";
 const ACCOUNT_KEY_PREFIX = "paperExchange.account.";
-const LEGACY_SINGLE_ACCOUNT_KEY = "paperExchangeState.v1"; // old single-account save, migrated on first load
+const LEGACY_SINGLE_ACCOUNT_KEY = "paperExchangeState.v1";
+const UI_PREFS_KEY = "paperExchange.uiPrefs.v1";
+const THEME_KEY = "paperExchange.theme.v1";
+const BOTTOM_H_KEY = "paperExchange.bottomH.v1";
 
-// Fallback contract meta (used until /fapi/v1/exchangeInfo responds; also the floor for safety).
 let symbolMeta = {
   BTCUSDT:{ pricePrecision:1, qtyPrecision:3, qtyStep:0.001, maintMarginRate:0.004 },
   ETHUSDT:{ pricePrecision:2, qtyPrecision:3, qtyStep:0.001, maintMarginRate:0.005 }
 };
 
 /* ================= UI STATE ================= */
+function loadUiPrefs(){
+  try{
+    const raw = localStorage.getItem(UI_PREFS_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {};
+}
+function saveUiPrefs(){
+  try{
+    localStorage.setItem(UI_PREFS_KEY, JSON.stringify({
+      symbol: ui.symbol,
+      tf: ui.tf,
+      eqType: ui.eqType,
+      eqSource: ui.eqSource
+    }));
+  }catch(e){}
+}
+
+const prefs = loadUiPrefs();
 let ui = {
-  symbol: "BTCUSDT",
-  tf: "5m",
+  symbol: prefs.symbol || "BTCUSDT",
+  tf: prefs.tf || "5m",
   side: "LONG",
-  tab: "positions"
+  tab: "positions",
+  eqType: prefs.eqType || "area",
+  eqSource: prefs.eqSource || "live"
 };
 
 /* ================= ACCOUNT STORAGE ================= */
@@ -487,19 +599,40 @@ function saveAccountsIndex(idx){
   try{ localStorage.setItem(ACCOUNTS_INDEX_KEY, JSON.stringify(idx)); }catch(e){}
 }
 
-function freshAccount(name, startingBalance, currencySymbol){
+function freshAccount(name, startingBalance, currencySymbol, feeConfig){
   const bal = (startingBalance!=null && !isNaN(startingBalance)) ? startingBalance : DEFAULT_STARTING_BALANCE;
+  const feeEnabled = !!(feeConfig && feeConfig.enabled);
+  let feeRate = 0.0004;
+  let feeFixed = 0;
+  let feeMode = "percent";
+  if(feeEnabled && feeConfig){
+    feeMode = feeConfig.mode === "fixed" ? "fixed" : "percent";
+    if(feeMode === "percent"){
+      // user enters e.g. 0.04 meaning 0.04% = 4 bps → rate = 0.0004
+      const pct = parseFloat(feeConfig.value);
+      feeRate = isNaN(pct) ? 0.0004 : pct / 100;
+    }else{
+      feeFixed = parseFloat(feeConfig.value) || 0;
+      feeRate = 0;
+    }
+  }else if(feeConfig && feeConfig.enabled === false){
+    feeRate = 0;
+    feeFixed = 0;
+  }
   return {
     id: uid(),
     name: name || "Account",
     currencySymbol: currencySymbol || "$",
     startingBalance: bal,
     balance: bal,
-    feeRate: 0.0004,     // 4 bps simulated taker fee
-    slippageBps: 2,      // 2 bps simulated slippage
-    positions: {},       // symbol -> position
-    trades: [],          // closed trade log
-    equityHistory: []    // [{t, v}] recent samples + hourly-compacted older history
+    feeRate: feeRate,
+    feeFixed: feeFixed,
+    feeMode: feeMode,
+    feeEnabled: feeEnabled,
+    slippageBps: 2,
+    positions: {},
+    trades: [],
+    equityHistory: []
   };
 }
 
@@ -513,6 +646,10 @@ function loadAccount(id){
     s.trades = s.trades || [];
     s.equityHistory = s.equityHistory || [];
     s.currencySymbol = s.currencySymbol || "$";
+    s.feeRate = (s.feeRate!=null) ? s.feeRate : 0.0004;
+    s.feeFixed = s.feeFixed || 0;
+    s.feeMode = s.feeMode || "percent";
+    s.feeEnabled = s.feeEnabled !== false;
     s.id = s.id || id;
     return s;
   }catch(e){ return null; }
@@ -522,9 +659,6 @@ function persistAccountBlob(acc){
   try{ localStorage.setItem(ACCOUNT_KEY_PREFIX+acc.id, JSON.stringify(acc)); }catch(e){}
 }
 
-// First run: build the accounts index. If an old single-account save exists
-// (from before multi-account support), migrate it in as "Default" instead of
-// discarding the user's paper trading history.
 function initAccounts(){
   let idx = loadAccountsIndex();
   if(idx.length === 0){
@@ -535,13 +669,13 @@ function initAccounts(){
     }catch(e){}
     let acc;
     if(legacy && typeof legacy.balance === "number"){
-      acc = freshAccount("Default", legacy.balance, "$");
+      acc = freshAccount("Default", legacy.balance, "$", {enabled:true, mode:"percent", value:0.04});
       acc.positions = legacy.positions || {};
       acc.trades = legacy.trades || [];
       acc.equityHistory = legacy.equityHistory || [];
       try{ localStorage.removeItem(LEGACY_SINGLE_ACCOUNT_KEY); }catch(e){}
     }else{
-      acc = freshAccount("Default", DEFAULT_STARTING_BALANCE, "$");
+      acc = freshAccount("Default", DEFAULT_STARTING_BALANCE, "$", {enabled:true, mode:"percent", value:0.04});
     }
     idx = [{ id:acc.id, name:acc.name, currencySymbol:acc.currencySymbol }];
     saveAccountsIndex(idx);
@@ -594,6 +728,7 @@ async function switchAccount(id){
   await reconcileOpenPositions();
   drawOrderLinesForCurrentSymbol();
   updateAll();
+  rebuildEquityChart();
 }
 
 /* ================= MARKET STATE ================= */
@@ -602,15 +737,38 @@ let market = {
   ETHUSDT: { last:0, bid:0, ask:0, prevDayClose:0 }
 };
 
+/* ================= THEME ================= */
+function applyTheme(theme){
+  if(theme === "light") document.documentElement.classList.add("theme-light");
+  else document.documentElement.classList.remove("theme-light");
+  try{ localStorage.setItem(THEME_KEY, theme); }catch(e){}
+  // refresh chart colors
+  const isLight = theme === "light";
+  const opts = {
+    layout:{ background:{color:"transparent"}, textColor: isLight ? "#5a677a" : "#8792a3" },
+    grid:{ vertLines:{color: isLight ? "#e8edf4" : "#151c27"}, horzLines:{color: isLight ? "#e8edf4" : "#151c27"} },
+    rightPriceScale:{ borderColor: isLight ? "#d0d7e2" : "#232d3b" },
+    timeScale:{ borderColor: isLight ? "#d0d7e2" : "#232d3b" }
+  };
+  if(typeof chart !== "undefined" && chart) chart.applyOptions(opts);
+  if(typeof eqChart !== "undefined" && eqChart) eqChart.applyOptions(opts);
+  document.getElementById("themeBtn").textContent = isLight ? "Dark" : "Light";
+}
+(function initTheme(){
+  let t = "dark";
+  try{ t = localStorage.getItem(THEME_KEY) || "dark"; }catch(e){}
+  applyTheme(t);
+})();
+
 /* ================= CHART SETUP ================= */
 const chartEl = document.getElementById("price-chart");
 const chart = LightweightCharts.createChart(chartEl, {
-  layout:{ background:{color:"transparent"}, textColor:"#8792a3", fontFamily:"IBM Plex Mono, monospace", fontSize:11 },
-  grid:{ vertLines:{color:"#151c27"}, horzLines:{color:"#151c27"} },
-  rightPriceScale:{ borderColor:"#232d3b" },
-  timeScale:{ borderColor:"#232d3b", timeVisible:true, secondsVisible:false },
+  layout:{ background:{color:"transparent"}, textColor: getComputedStyle(document.documentElement).getPropertyValue("--chart-text").trim() || "#8792a3", fontFamily:"IBM Plex Mono, monospace", fontSize:11 },
+  grid:{ vertLines:{color: getComputedStyle(document.documentElement).getPropertyValue("--chart-grid").trim() || "#151c27"}, horzLines:{color: getComputedStyle(document.documentElement).getPropertyValue("--chart-grid").trim() || "#151c27"} },
+  rightPriceScale:{ borderColor: getComputedStyle(document.documentElement).getPropertyValue("--chart-border").trim() || "#232d3b" },
+  timeScale:{ borderColor: getComputedStyle(document.documentElement).getPropertyValue("--chart-border").trim() || "#232d3b", timeVisible:true, secondsVisible:false },
   crosshair:{ mode:0 },
-  watermark:{ visible:true, text:"BTCUSDT · Lightweight Charts (not TradingView)", color:"rgba(255,255,255,0.045)", fontSize:22 }
+  watermark:{ visible:true, text:"BTCUSDT · Lightweight Charts", color:"rgba(255,255,255,0.045)", fontSize:22 }
 });
 const candleSeries = chart.addCandlestickSeries({
   upColor:"#3ddc97", downColor:"#ff5c6c", borderVisible:false,
@@ -627,25 +785,80 @@ function clearOrderLines(){
   entryLine=slLine=tpLine=null;
 }
 
-const eqChart = LightweightCharts.createChart(document.getElementById("equity-chart"), {
+/* Equity chart */
+const eqChartEl = document.getElementById("equity-chart");
+const eqChart = LightweightCharts.createChart(eqChartEl, {
   layout:{ background:{color:"transparent"}, textColor:"#8792a3", fontFamily:"IBM Plex Mono, monospace", fontSize:11 },
   grid:{ vertLines:{color:"#151c27"}, horzLines:{color:"#151c27"} },
   rightPriceScale:{ borderColor:"#232d3b" },
   timeScale:{ borderColor:"#232d3b", timeVisible:true }
 });
-const eqSeries = eqChart.addAreaSeries({
-  lineColor:"#e8a33d", topColor:"rgba(232,163,61,.25)", bottomColor:"rgba(232,163,61,0)", lineWidth:2
-});
+let eqSeries = null;
+function createEqSeries(type){
+  if(eqSeries){ try{ eqChart.removeSeries(eqSeries); }catch(e){} eqSeries = null; }
+  if(type === "candle"){
+    eqSeries = eqChart.addCandlestickSeries({
+      upColor:"#3ddc97", downColor:"#ff5c6c", borderVisible:false,
+      wickUpColor:"#3ddc97", wickDownColor:"#ff5c6c"
+    });
+  }else if(type === "line"){
+    eqSeries = eqChart.addLineSeries({ color:"#e8a33d", lineWidth:2 });
+  }else{
+    eqSeries = eqChart.addAreaSeries({
+      lineColor:"#e8a33d", topColor:"rgba(232,163,61,.25)", bottomColor:"rgba(232,163,61,0)", lineWidth:2
+    });
+  }
+}
+createEqSeries(ui.eqType);
 
 new ResizeObserver(()=>{
   chart.applyOptions({ width:chartEl.clientWidth, height:chartEl.clientHeight });
 }).observe(chartEl);
 new ResizeObserver(()=>{
-  const el = document.getElementById("equity-chart");
-  eqChart.applyOptions({ width:el.clientWidth, height:el.clientHeight });
-}).observe(document.getElementById("equity-chart"));
+  eqChart.applyOptions({ width:eqChartEl.clientWidth, height:eqChartEl.clientHeight });
+}).observe(eqChartEl);
 
-/* ================= REST: exchange info + klines ================= */
+/* ================= BOTTOM PANEL RESIZE ================= */
+(function setupResize(){
+  const handle = document.getElementById("resizeHandle");
+  const app = document.getElementById("app");
+  let startY = 0, startH = 0, dragging = false;
+  let savedH = 190;
+  try{
+    const h = parseInt(localStorage.getItem(BOTTOM_H_KEY),10);
+    if(h >= 100 && h <= 600){ savedH = h; document.documentElement.style.setProperty("--bottom-h", savedH+"px"); }
+  }catch(e){}
+
+  handle.addEventListener("mousedown", (e)=>{
+    e.preventDefault();
+    dragging = true;
+    handle.classList.add("dragging");
+    startY = e.clientY;
+    startH = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--bottom-h")) || savedH;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  });
+  window.addEventListener("mousemove", (e)=>{
+    if(!dragging) return;
+    const dy = startY - e.clientY;
+    let nh = Math.max(100, Math.min(window.innerHeight * 0.7, startH + dy));
+    document.documentElement.style.setProperty("--bottom-h", nh+"px");
+    savedH = nh;
+  });
+  window.addEventListener("mouseup", ()=>{
+    if(!dragging) return;
+    dragging = false;
+    handle.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    try{ localStorage.setItem(BOTTOM_H_KEY, String(savedH)); }catch(e){}
+    // force chart resize
+    chart.applyOptions({ width:chartEl.clientWidth, height:chartEl.clientHeight });
+    eqChart.applyOptions({ width:eqChartEl.clientWidth, height:eqChartEl.clientHeight });
+  });
+})();
+
+/* ================= REST ================= */
 async function loadExchangeInfo(){
   try{
     const res = await fetch(`${REST_BASE}/fapi/v1/exchangeInfo`);
@@ -662,7 +875,7 @@ async function loadExchangeInfo(){
   }
 }
 
-function tfToInterval(tf){ return tf; } // Binance interval strings already match our tf labels (1m,5m,15m,1h,4h,1d)
+function tfToInterval(tf){ return tf; }
 
 async function loadKlines(symbol, tf, extraParams){
   const url = `${REST_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${tfToInterval(tf)}${extraParams||"&limit=500"}`;
@@ -682,11 +895,11 @@ async function load24h(symbol){
     const res = await fetch(`${REST_BASE}/fapi/v1/ticker/24hr?symbol=${symbol}`);
     const d = await res.json();
     market[symbol].prevDayClose = parseFloat(d.prevClosePrice) || (parseFloat(d.lastPrice) - parseFloat(d.priceChange));
-  }catch(e){ /* non-fatal */ }
+  }catch(e){}
 }
 
 let lastLoadedBar = null;
-let liveBar = null; // the currently-forming candle for ui.symbol/ui.tf, updated on every price tick
+let liveBar = null;
 
 async function refreshChart(){
   clearOrderLines();
@@ -705,18 +918,14 @@ async function refreshChart(){
   chart.applyOptions({ watermark:{ text: ui.symbol + " · " + ui.tf.toUpperCase() + " · Lightweight Charts" } });
   drawOrderLinesForCurrentSymbol();
   updateAll();
+  saveUiPrefs();
 }
 
-// Bucket the current moment into the start time of the active-timeframe candle.
 function bucketStartSec(tf){
   const ms = TF_MS[tf];
   return Math.floor(Date.now()/ms) * ms / 1000;
 }
 
-// Called on EVERY bid/ask tick (not just kline pushes) so the candle visibly
-// grows/moves in real time instead of waiting for the next 1-6s kline message
-// or a manual refresh. The kline stream (handleKline) remains authoritative
-// for final OHLCV once a bar closes — this just keeps things live in between.
 function updateLiveBar(price){
   if(!price || isNaN(price)) return;
   const bStart = bucketStartSec(ui.tf);
@@ -732,11 +941,6 @@ function updateLiveBar(price){
 }
 
 /* ================= WEBSOCKET ================= */
-// Connections are tracked by generation number rather than a shared "was this
-// intentional" flag: every connectWS() call bumps wsGen, and each socket's
-// handlers close over the generation they were created with. A stale socket's
-// close/error events are ignored once a newer generation exists, which avoids
-// races when switching symbol/timeframe quickly.
 let ws = null;
 let wsGen = 0;
 let wsReconnectDelay = 1000;
@@ -784,7 +988,7 @@ function connectWS(){
     }catch(err){ console.error("WS message handling error:", err); }
   };
   socket.onclose = ()=>{
-    if(myGen !== wsGen) return; // superseded by a newer connection — nothing to do
+    if(myGen !== wsGen) return;
     setStatus("reconnecting","RECONNECTING");
     scheduleReconnect(myGen);
   };
@@ -812,16 +1016,13 @@ function handleBookTicker(d){
   checkSlTp(symbol);
   if(symbol === ui.symbol){
     updatePriceStrip();
-    updateLiveBar(market[symbol].last); // <-- keeps the candle moving every tick, not just on kline pushes
+    updateLiveBar(market[symbol].last);
   }
   updateAccountAndPositions();
 }
 
 function handleKline(d){
   const k = d.k;
-  // Guard against stray messages from a timeframe/symbol we've since switched
-  // away from — a late message from the old interval would otherwise be
-  // plotted with a mismatched timestamp.
   if(d.s !== ui.symbol || k.i !== ui.tf) return;
   const bar = {
     time: Math.floor(k.t/1000),
@@ -830,7 +1031,7 @@ function handleKline(d){
   if([bar.open,bar.high,bar.low,bar.close].some(v=>isNaN(v))) return;
   candleSeries.update(bar);
   volumeSeries.update({ time:bar.time, value: parseFloat(k.v)||0, color: bar.close>=bar.open ? "rgba(61,220,151,.35)" : "rgba(255,92,108,.35)" });
-  liveBar = bar; // kline is authoritative — resync so the next tick continues from the real bar
+  liveBar = bar;
   lastKlineTs = Date.now();
 }
 
@@ -841,6 +1042,26 @@ setInterval(()=>{
   const secs = Math.round((Date.now()-lastTickerTs)/1000);
   el.textContent = secs < 2 ? "· live" : `· updated ${secs}s ago`;
 }, 1000);
+
+/* Candle close timer */
+function updateCandleTimer(){
+  const el = document.getElementById("candleTimer");
+  if(!el) return;
+  const ms = TF_MS[ui.tf];
+  if(!ms){ el.textContent = "—"; return; }
+  const now = Date.now();
+  const remain = ms - (now % ms);
+  const totalSec = Math.floor(remain / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  let txt;
+  if(h > 0) txt = `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+  else if(m > 0) txt = `${m}m ${String(s).padStart(2,"0")}s`;
+  else txt = `${s}s`;
+  el.textContent = "⏱ " + txt;
+}
+setInterval(updateCandleTimer, 250);
 
 /* ================= FORMATTING ================= */
 function fmtPrice(symbol, v){
@@ -892,9 +1113,15 @@ function availableMargin(){
   return account.balance - marginUsed();
 }
 
-// Approximate isolated-margin liquidation price.
-// This mirrors Binance's general isolated-margin shape (entry, leverage, maintenance margin rate)
-// but is NOT the exact tiered formula Binance uses internally — treat it as an estimate only.
+function calcOpenFee(notional){
+  if(account.feeMode === "fixed") return account.feeFixed || 0;
+  return notional * (account.feeRate || 0);
+}
+function calcCloseFee(notional){
+  if(account.feeMode === "fixed") return account.feeFixed || 0;
+  return notional * (account.feeRate || 0);
+}
+
 function estimateLiquidation(side, entry, leverage, mmr){
   if(!entry || !leverage) return null;
   if(side==="LONG") return entry * (1 - 1/leverage + mmr);
@@ -919,7 +1146,7 @@ function computeOrderPreview(){
   const entryEst = (side==="LONG" ? (mkt.ask||refPrice) : (mkt.bid||refPrice)) * slippageMult;
   const notional = qty * entryEst;
   const margin = notional / leverage;
-  const fee = notional * account.feeRate;
+  const fee = calcOpenFee(notional);
   const liq = estimateLiquidation(side, entryEst, leverage, meta.maintMarginRate);
 
   let rr = null;
@@ -961,6 +1188,7 @@ function refreshOrderPreview(){
   document.getElementById("calcRR").textContent = p.rr ? (
     p.rr.ratio!=null ? (fmtUsd(p.rr.risk) + " · 1:" + p.rr.ratio.toFixed(2)) : (fmtUsd(p.rr.risk) + " risk")
   ) : "—";
+  document.getElementById("calcFee").textContent = p.fee!=null ? fmtUsd(p.fee) : "—";
 
   const btn = document.getElementById("submitOrder");
   const warn = document.getElementById("orderWarn");
@@ -1015,11 +1243,9 @@ function placeOrder(){
   if(p.symbol === ui.symbol) drawOrderLinesForCurrentSymbol();
   clearOrderForm();
   updateAll();
+  sampleEquity(true);
 }
 
-// override (optional): {exitPrice, closedAt} — used by the SL/TP/liquidation
-// reconciliation pass to close a position at the historical price/time it was
-// actually hit, instead of at the current live price.
 function closePosition(symbol, fraction, reason, override){
   const pos = account.positions[symbol];
   if(!pos) return;
@@ -1032,6 +1258,10 @@ function closePosition(symbol, fraction, reason, override){
   }else{
     const mkt = market[symbol];
     const exitRef = pos.side==="LONG" ? (mkt.bid||mkt.last) : (mkt.ask||mkt.last);
+    if(!exitRef){
+      console.warn("No market price available to close", symbol);
+      return;
+    }
     const slippageMult = 1 + (account.slippageBps/10000) * (pos.side==="LONG" ? -1 : 1);
     exitPrice = exitRef * slippageMult;
     closedAt = Date.now();
@@ -1039,17 +1269,18 @@ function closePosition(symbol, fraction, reason, override){
 
   const closedQty = pos.qty * fraction;
   const grossPnl = pos.side==="LONG" ? closedQty*(exitPrice-pos.entry) : closedQty*(pos.entry-exitPrice);
-  const closeFee = closedQty * exitPrice * account.feeRate;
+  const closeFee = calcCloseFee(closedQty * exitPrice);
   const netPnl = grossPnl - closeFee;
 
   account.balance += netPnl;
+  // When fully closing, also release the margin concept (balance already holds free cash + realized)
   account.trades.push({
     closedAt, symbol, side: pos.side, qty: closedQty,
     entry: pos.entry, exit: exitPrice, leverage: pos.leverage,
     fees: closeFee, netPnl, reason: reason || "Manual close"
   });
 
-  if(fraction >= 1){
+  if(fraction >= 0.999){
     delete account.positions[symbol];
     if(symbol===ui.symbol) clearOrderLines();
   }else{
@@ -1058,16 +1289,28 @@ function closePosition(symbol, fraction, reason, override){
   }
   saveState();
   updateAll();
+  sampleEquity(true);
 }
 
 function reversePosition(symbol){
   const pos = account.positions[symbol];
   if(!pos) return;
+  const qty = pos.qty;
+  const side = pos.side;
   closePosition(symbol, 1, "Reverse");
-  ui.side = pos.side==="LONG" ? "SHORT" : "LONG";
+  // After close, open the opposite side with same qty
+  ui.side = side==="LONG" ? "SHORT" : "LONG";
   document.querySelectorAll(".side-toggle button").forEach(b=> b.classList.toggle("active", b.dataset.side===ui.side));
-  document.getElementById("qtyInput").value = fmtQty(symbol,pos.qty);
-  refreshOrderPreview();
+  document.getElementById("qtyInput").value = fmtQty(symbol, qty);
+  // Keep SL/TP empty for the reverse (user can set again)
+  document.getElementById("slInput").value = "";
+  document.getElementById("tpInput").value = "";
+  const p = refreshOrderPreview();
+  if(p.valid) placeOrder();
+  else {
+    // If not valid (e.g. margin), leave form filled so user can adjust
+    document.getElementById("orderWarn").textContent = p.reason || "Could not auto-open reverse — adjust size.";
+  }
 }
 
 function checkSlTp(symbol){
@@ -1083,7 +1326,6 @@ function checkSlTp(symbol){
     if(pos.sl!=null && last>=pos.sl){ closePosition(symbol,1,"Stop loss hit"); return; }
     if(pos.tp!=null && last<=pos.tp){ closePosition(symbol,1,"Take profit hit"); return; }
   }
-  // Safety-net liquidation check against the same estimate shown pre-trade.
   const meta = symbolMeta[symbol];
   const liq = estimateLiquidation(pos.side, pos.entry, pos.leverage, meta.maintMarginRate);
   if(liq!=null){
@@ -1092,21 +1334,11 @@ function checkSlTp(symbol){
   }
 }
 
-// Runs on load and on every account switch. checkSlTp only fires while the
-// tab is open and ticks are arriving — if you close the tab (or leave it for
-// days) a position's SL/TP/liquidation can't be checked in real time. This
-// walks the actual price history since the position opened and retroactively
-// closes it at the first bar where a level was touched, so returning to the
-// app shows a resolved trade instead of a stale "still open" position that
-// silently blew past its stop while you were away.
-// Caveat: fetched at 5m resolution, capped at 1500 bars (~5.2 days) per call —
-// positions open far longer than that are checked as far back as the API call
-// reaches; anything before that window is left as-is.
 async function reconcilePosition(symbol){
   const pos = account.positions[symbol];
   if(!pos) return;
   const nowMs = Date.now();
-  if(nowMs - pos.openedAt < 30000) return; // nothing meaningful to check yet
+  if(nowMs - pos.openedAt < 30000) return;
   const meta = symbolMeta[symbol];
   let bars;
   try{
@@ -1131,7 +1363,6 @@ async function reconcilePosition(symbol){
       return;
     }
   }
-  // Still open — refresh its "current" mark isn't needed here; live ticks will take over.
 }
 
 async function reconcileOpenPositions(){
@@ -1159,9 +1390,6 @@ function drawOrderLinesForCurrentSymbol(){
   updateLivePositionLine();
 }
 
-// Updates the entry line's label with live $ / % P&L, without recreating the
-// line (createPriceLine/removePriceLine on every tick would be wasteful —
-// IPriceLine.applyOptions() mutates it in place).
 function updateLivePositionLine(){
   const pos = account.positions[ui.symbol];
   if(!pos || !entryLine) return;
@@ -1182,23 +1410,20 @@ function updateChartPnlBadge(){
   badge.style.display = "block";
 }
 
-// Dashed preview lines for the SL/TP the trader is composing, shown only
-// while there's no live position yet on this symbol (once a position opens,
-// the real draggable SL/TP lines above take over).
 let previewSlLine=null, previewTpLine=null;
 function updatePreviewLines(){
   if(previewSlLine){ candleSeries.removePriceLine(previewSlLine); previewSlLine=null; }
   if(previewTpLine){ candleSeries.removePriceLine(previewTpLine); previewTpLine=null; }
-  if(account.positions[ui.symbol]) return; // real lines are shown instead
+  if(account.positions[ui.symbol]) return;
   const sl = parseFloat(document.getElementById("slInput").value);
   const tp = parseFloat(document.getElementById("tpInput").value);
   if(sl>0) previewSlLine = candleSeries.createPriceLine({ price:sl, color:"#ff5c6c", lineWidth:1, lineStyle:3, axisLabelVisible:true, title:"SL (pending)" });
   if(tp>0) previewTpLine = candleSeries.createPriceLine({ price:tp, color:"#3ddc97", lineWidth:1, lineStyle:3, axisLabelVisible:true, title:"TP (pending)" });
 }
 
-/* ---- pick-on-chart & drag-to-adjust interaction ---- */
-let pickMode = null;    // 'sl' | 'tp' | null — armed via the "pick on chart" links
-let dragTarget = null;  // 'sl' | 'tp' | null — set while dragging a live position's line
+/* ---- pick-on-chart & drag-to-adjust ---- */
+let pickMode = null;
+let dragTarget = null;
 
 function setPickMode(mode){
   pickMode = mode;
@@ -1235,7 +1460,6 @@ chartEl.addEventListener("mousemove",(e)=>{
     drawOrderLinesForCurrentSymbol();
     return;
   }
-  // hover feedback so it's discoverable that lines are draggable
   const pos = account.positions[ui.symbol];
   if(!pos){ chartEl.style.cursor = pickMode ? "copy" : "crosshair"; return; }
   const HIT = 6;
@@ -1263,6 +1487,112 @@ chartEl.addEventListener("click",(e)=>{
   setPickMode(null);
   refreshOrderPreview();
 });
+
+/* ================= EQUITY DATA ================= */
+let lastEquitySample = 0;
+function compactEquityHistory(){
+  const hist = account.equityHistory;
+  if(!hist.length) return;
+  const DAY = 86400;
+  const now = Math.floor(Date.now()/1000);
+  const cutoff = now - DAY;
+  const recent = hist.filter(p=>p.t >= cutoff);
+  const old = hist.filter(p=>p.t < cutoff);
+  const bucketed = {};
+  old.forEach(p=>{
+    const b = Math.floor(p.t/3600)*3600;
+    bucketed[b] = p;
+  });
+  const compactedOld = Object.values(bucketed).sort((a,b)=>a.t-b.t);
+  account.equityHistory = compactedOld.concat(recent.sort((a,b)=>a.t-b.t));
+}
+
+/** Rebuild equity purely from closed trades (starting balance → stepwise after each close). */
+function buildClosedTradesEquity(){
+  const points = [];
+  let bal = account.startingBalance;
+  const startT = account.trades.length
+    ? Math.min(...account.trades.map(t=>Math.floor(t.closedAt/1000))) - 60
+    : Math.floor(Date.now()/1000) - 60;
+  points.push({ t: startT, v: bal });
+  const sorted = account.trades.slice().sort((a,b)=>a.closedAt-b.closedAt);
+  sorted.forEach(t=>{
+    bal += t.netPnl;
+    // fees on open are already reflected in balance history; netPnl already includes close fee
+    points.push({ t: Math.floor(t.closedAt/1000), v: bal });
+  });
+  // Current realized balance (no open unrealized)
+  const now = Math.floor(Date.now()/1000);
+  if(!points.length || points[points.length-1].t !== now){
+    points.push({ t: now, v: account.balance });
+  }
+  return points;
+}
+
+function toCandleData(points){
+  // Group consecutive points into simple OHLC candles (one candle per point for sparse closed-trade data,
+  // or bucket for dense live data)
+  if(!points.length) return [];
+  const out = [];
+  for(let i=0;i<points.length;i++){
+    const p = points[i];
+    const prev = i>0 ? points[i-1].v : p.v;
+    const o = prev, c = p.v;
+    const h = Math.max(o,c), l = Math.min(o,c);
+    out.push({ time:p.t, open:o, high:h, low:l, close:c });
+  }
+  return out;
+}
+
+function rebuildEquityChart(){
+  if(!eqSeries) createEqSeries(ui.eqType);
+  let points;
+  if(ui.eqSource === "closed"){
+    points = buildClosedTradesEquity();
+  }else{
+    points = account.equityHistory.slice();
+    // ensure latest live equity is reflected
+    const now = Math.floor(Date.now()/1000);
+    const eq = equity();
+    if(points.length && points[points.length-1].t === now){
+      points[points.length-1].v = eq;
+    }else if(points.length){
+      points.push({ t: now, v: eq });
+    }else{
+      points = [{ t: now, v: eq }];
+    }
+  }
+  if(ui.eqType === "candle"){
+    eqSeries.setData(toCandleData(points));
+  }else{
+    eqSeries.setData(points.map(p=>({ time:p.t, value:p.v })));
+  }
+  try{ eqChart.timeScale().fitContent(); }catch(e){}
+}
+
+function sampleEquity(force){
+  const now = Math.floor(Date.now()/1000);
+  if(!force && now - lastEquitySample < 5) return;
+  lastEquitySample = now;
+  const eq = equity();
+  const hist = account.equityHistory;
+  if(hist.length && hist[hist.length-1].t === now){
+    hist[hist.length-1].v = eq;
+  }else{
+    hist.push({ t: now, v: eq });
+  }
+  compactEquityHistory();
+  if(ui.eqSource === "live"){
+    if(ui.eqType === "candle"){
+      // update last candle
+      rebuildEquityChart();
+    }else if(eqSeries){
+      eqSeries.update({ time: now, value: eq });
+    }
+  }
+  // closed-trades source is only rebuilt on trade events / tab switch
+  saveState();
+}
 
 /* ================= RENDERING ================= */
 function updatePriceStrip(){
@@ -1295,6 +1625,10 @@ function updateAccountPanel(){
 function updatePositionsTable(){
   const body = document.getElementById("positionsBody");
   const symbols = Object.keys(account.positions);
+  const count = symbols.length;
+  const tabBtn = document.getElementById("tabPositions");
+  if(tabBtn) tabBtn.textContent = count > 0 ? `Positions (${count})` : "Positions";
+
   if(symbols.length===0){
     body.innerHTML = '<tr class="empty-row"><td colspan="11">No open positions</td></tr>';
     return;
@@ -1318,9 +1652,9 @@ function updatePositionsTable(){
       <td class="up">${pos.tp!=null?fmtPrice(symbol,pos.tp):"—"}</td>
       <td class="${pnl>=0?'up':'down'}">${fmtUsd(pnl)} (${fmtPct(pnlPct)})</td>
       <td>
-        <button class="mini-btn" data-act="reverse" data-symbol="${symbol}">Reverse</button>
-        <button class="mini-btn" data-act="half" data-symbol="${symbol}">Close ½</button>
-        <button class="mini-btn danger" data-act="close" data-symbol="${symbol}">Close</button>
+        <button type="button" class="mini-btn" data-act="reverse" data-symbol="${symbol}">Reverse</button>
+        <button type="button" class="mini-btn" data-act="half" data-symbol="${symbol}">Close ½</button>
+        <button type="button" class="mini-btn danger" data-act="close" data-symbol="${symbol}">Close</button>
       </td>
     </tr>`;
   }).join("");
@@ -1328,6 +1662,9 @@ function updatePositionsTable(){
 
 function updateHistoryTable(){
   const body = document.getElementById("historyBody");
+  const histBtn = document.getElementById("tabHistory");
+  if(histBtn) histBtn.textContent = account.trades.length > 0 ? `History (${account.trades.length})` : "History";
+
   if(account.trades.length===0){
     body.innerHTML = '<tr class="empty-row"><td colspan="10">No closed trades yet</td></tr>';
     return;
@@ -1350,44 +1687,6 @@ function updateHistoryTable(){
   body.innerHTML = rows.join("");
 }
 
-// Equity samples: fine-grained (every ~5s) for the last 24h, then compacted
-// to one sample per hour beyond that — so the curve can hold weeks/months of
-// history in a small amount of localStorage instead of being hard-capped
-// (and silently losing old data) after a few hours.
-let lastEquitySample = 0;
-function compactEquityHistory(){
-  const hist = account.equityHistory;
-  if(!hist.length) return;
-  const DAY = 86400;
-  const now = Math.floor(Date.now()/1000);
-  const cutoff = now - DAY;
-  const recent = hist.filter(p=>p.t >= cutoff);
-  const old = hist.filter(p=>p.t < cutoff);
-  const bucketed = {};
-  old.forEach(p=>{
-    const b = Math.floor(p.t/3600)*3600;
-    bucketed[b] = p; // last sample within each hour wins
-  });
-  const compactedOld = Object.values(bucketed).sort((a,b)=>a.t-b.t);
-  account.equityHistory = compactedOld.concat(recent.sort((a,b)=>a.t-b.t));
-}
-
-function sampleEquity(force){
-  const now = Math.floor(Date.now()/1000);
-  if(!force && now - lastEquitySample < 5) return;
-  lastEquitySample = now;
-  const eq = equity();
-  const hist = account.equityHistory;
-  if(hist.length && hist[hist.length-1].t === now){
-    hist[hist.length-1].v = eq;
-  }else{
-    hist.push({ t: now, v: eq });
-  }
-  compactEquityHistory();
-  eqSeries.setData(account.equityHistory.map(p=>({ time:p.t, value:p.v })));
-  saveState();
-}
-
 function updateAccountAndPositions(){
   updateAccountPanel();
   updatePositionsTable();
@@ -1402,6 +1701,7 @@ function updateAll(){
   updateHistoryTable();
   refreshOrderPreview();
   sampleEquity(true);
+  if(ui.eqSource === "closed") rebuildEquityChart();
 }
 
 /* ================= EVENTS ================= */
@@ -1446,28 +1746,18 @@ document.getElementById("pickSlBtn").addEventListener("click", ()=> setPickMode(
 document.getElementById("pickTpBtn").addEventListener("click", ()=> setPickMode(pickMode==="tp" ? null : "tp"));
 document.getElementById("dragHint").textContent = "Tip: once a trade is open, drag its SL/TP lines on the chart to adjust them.";
 
-// One-click market entry directly from the chart, using whatever qty /
-// leverage / SL / TP is already set in the order ticket.
-function chartQuickTrade(side){
-  ui.side = side;
-  document.querySelectorAll(".side-toggle button").forEach(b=>b.classList.toggle("active", b.dataset.side===side));
-  const p = refreshOrderPreview();
-  if(!p.valid){
-    document.getElementById("orderWarn").textContent = p.reason || "Set a quantity in the order ticket first.";
-    return;
-  }
-  placeOrder();
-}
-document.getElementById("chartBuyBtn").addEventListener("click", ()=> chartQuickTrade("LONG"));
-document.getElementById("chartSellBtn").addEventListener("click", ()=> chartQuickTrade("SHORT"));
-
+/* Positions table actions — delegated, robust */
 document.getElementById("positionsBody").addEventListener("click",(e)=>{
   const btn = e.target.closest("button[data-act]");
   if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
   const symbol = btn.dataset.symbol;
-  if(btn.dataset.act==="close") closePosition(symbol,1,"Manual close");
-  else if(btn.dataset.act==="half") closePosition(symbol,0.5,"Partial close");
-  else if(btn.dataset.act==="reverse") reversePosition(symbol);
+  const act = btn.dataset.act;
+  if(!symbol || !account.positions[symbol]) return;
+  if(act==="close") closePosition(symbol, 1, "Manual close");
+  else if(act==="half") closePosition(symbol, 0.5, "Partial close");
+  else if(act==="reverse") reversePosition(symbol);
 });
 
 document.querySelector(".tabbar").addEventListener("click",(e)=>{
@@ -1476,32 +1766,61 @@ document.querySelector(".tabbar").addEventListener("click",(e)=>{
   ui.tab = btn.dataset.tab;
   document.querySelectorAll(".tabbar button[data-tab]").forEach(b=>b.classList.toggle("active", b===btn));
   ["positions","history","equity"].forEach(t=>{
-    document.getElementById("view-"+t).style.display = (t===ui.tab) ? "block" : "none";
+    const el = document.getElementById("view-"+t);
+    if(t === "equity"){
+      el.style.display = (t===ui.tab) ? "flex" : "none";
+    }else{
+      el.style.display = (t===ui.tab) ? "block" : "none";
+    }
   });
   if(ui.tab==="equity"){
     requestAnimationFrame(()=>{
-      const el = document.getElementById("equity-chart");
-      eqChart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
-      eqChart.timeScale().fitContent();
+      eqChart.applyOptions({ width: eqChartEl.clientWidth, height: eqChartEl.clientHeight });
+      rebuildEquityChart();
     });
   }
+});
+
+/* Equity type / source toggles */
+document.getElementById("eqTypeTools").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button[data-eqtype]");
+  if(!btn) return;
+  ui.eqType = btn.dataset.eqtype;
+  document.querySelectorAll("#eqTypeTools button").forEach(b=>b.classList.toggle("active", b===btn));
+  createEqSeries(ui.eqType);
+  rebuildEquityChart();
+  saveUiPrefs();
+});
+document.getElementById("eqSourceTools").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button[data-eqsrc]");
+  if(!btn) return;
+  ui.eqSource = btn.dataset.eqsrc;
+  document.querySelectorAll("#eqSourceTools button").forEach(b=>b.classList.toggle("active", b===btn));
+  rebuildEquityChart();
+  saveUiPrefs();
 });
 
 document.getElementById("resetAcctBtn").addEventListener("click", ()=>{
   if(!confirm("Reset this paper account to its starting balance? This clears positions, trades, and equity history.")) return;
   const keepId = account.id, keepName = account.name, keepCur = account.currencySymbol, keepStart = account.startingBalance;
-  account = freshAccount(keepName, keepStart, keepCur);
+  const feeCfg = {
+    enabled: account.feeEnabled,
+    mode: account.feeMode,
+    value: account.feeMode === "fixed" ? account.feeFixed : (account.feeRate * 100)
+  };
+  account = freshAccount(keepName, keepStart, keepCur, feeCfg);
   account.id = keepId;
   saveState();
   clearOrderLines();
   updateAll();
+  rebuildEquityChart();
 });
 
 document.getElementById("exportCsvBtn").addEventListener("click", ()=>{
   const header = ["closedAt","symbol","side","qty","entry","exit","leverage","fees","netPnl","reason"];
   const lines = [header.join(",")];
   account.trades.forEach(t=>{
-    lines.push([new Date(t.closedAt).toISOString(), t.symbol, t.side, t.qty, t.entry, t.exit, t.leverage, t.fees.toFixed(2), t.netPnl.toFixed(2), t.reason].join(","));
+    lines.push([new Date(t.closedAt).toISOString(), t.symbol, t.side, t.qty, t.entry, t.exit, t.leverage, t.fees.toFixed(2), t.netPnl.toFixed(2), JSON.stringify(t.reason)].join(","));
   });
   downloadBlob(lines.join("\n"), "trades.csv", "text/csv");
 });
@@ -1523,13 +1842,14 @@ document.getElementById("restoreFile").addEventListener("change",(e)=>{
       parsed.trades = parsed.trades || [];
       parsed.equityHistory = parsed.equityHistory || [];
       parsed.currencySymbol = parsed.currencySymbol || account.currencySymbol || "$";
-      parsed.id = account.id; // restore into the currently-selected account slot
+      parsed.id = account.id;
       parsed.name = account.name;
       account = parsed;
       saveState();
       await reconcileOpenPositions();
       drawOrderLinesForCurrentSymbol();
       updateAll();
+      rebuildEquityChart();
       alert("Account restored.");
     }catch(err){
       alert("Could not restore backup: " + err.message);
@@ -1548,16 +1868,44 @@ function downloadBlob(content, filename, mime){
   URL.revokeObjectURL(url);
 }
 
-/* ---- account switcher + new-account modal ---- */
+/* Theme */
+document.getElementById("themeBtn").addEventListener("click", ()=>{
+  const isLight = document.documentElement.classList.contains("theme-light");
+  applyTheme(isLight ? "dark" : "light");
+});
+
+/* Account switcher + new account */
 document.getElementById("acctSelect").addEventListener("change", async (e)=>{
   await switchAccount(e.target.value);
   populateAccountSelect();
+});
+
+document.getElementById("newAcctFeeEnable").addEventListener("change",(e)=>{
+  document.getElementById("feeOpts").classList.toggle("open", e.target.checked);
+});
+document.getElementById("newAcctFeeType").addEventListener("change",(e)=>{
+  const lbl = document.getElementById("feeValueLabel");
+  const inp = document.getElementById("newAcctFeeValue");
+  if(e.target.value === "fixed"){
+    lbl.textContent = "Fixed fee (per side)";
+    inp.value = "1";
+    inp.step = "0.01";
+  }else{
+    lbl.textContent = "Fee rate (%)";
+    inp.value = "0.04";
+    inp.step = "0.001";
+  }
 });
 
 document.getElementById("newAcctBtn").addEventListener("click", ()=>{
   document.getElementById("newAcctName").value = "";
   document.getElementById("newAcctBalance").value = "100000";
   document.getElementById("newAcctCurrency").value = "$";
+  document.getElementById("newAcctFeeEnable").checked = true;
+  document.getElementById("feeOpts").classList.add("open");
+  document.getElementById("newAcctFeeType").value = "percent";
+  document.getElementById("newAcctFeeValue").value = "0.04";
+  document.getElementById("feeValueLabel").textContent = "Fee rate (%)";
   document.getElementById("newAcctOverlay").style.display = "flex";
 });
 document.getElementById("newAcctCancel").addEventListener("click", ()=>{
@@ -1569,8 +1917,12 @@ document.getElementById("newAcctOverlay").addEventListener("click", (e)=>{
 document.getElementById("newAcctCreate").addEventListener("click", async ()=>{
   const name = document.getElementById("newAcctName").value.trim() || "New Account";
   const bal = parseFloat(document.getElementById("newAcctBalance").value) || DEFAULT_STARTING_BALANCE;
-  const cur = document.getElementById("newAcctCurrency").value.trim() || "$";
-  const acc = freshAccount(name, bal, cur);
+  const cur = document.getElementById("newAcctCurrency").value || "$";
+  const feeEnabled = document.getElementById("newAcctFeeEnable").checked;
+  const feeMode = document.getElementById("newAcctFeeType").value;
+  const feeValue = parseFloat(document.getElementById("newAcctFeeValue").value);
+  const feeCfg = { enabled: feeEnabled, mode: feeMode, value: isNaN(feeValue) ? (feeMode==="fixed"?0:0.04) : feeValue };
+  const acc = freshAccount(name, bal, cur, feeCfg);
   const idx = loadAccountsIndex();
   idx.push({ id:acc.id, name:acc.name, currencySymbol:acc.currencySymbol });
   saveAccountsIndex(idx);
@@ -1580,8 +1932,25 @@ document.getElementById("newAcctCreate").addEventListener("click", async ()=>{
   populateAccountSelect();
 });
 
+/* Restore UI symbol/tf active states */
+function syncUiTabs(){
+  document.querySelectorAll("#symbolTabs button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.symbol === ui.symbol);
+  });
+  document.querySelectorAll("#tfTabs button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.tf === ui.tf);
+  });
+  document.querySelectorAll("#eqTypeTools button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.eqtype === ui.eqType);
+  });
+  document.querySelectorAll("#eqSourceTools button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.eqsrc === ui.eqSource);
+  });
+}
+
 /* ================= INIT ================= */
 async function init(){
+  syncUiTabs();
   await loadExchangeInfo();
   populateAccountSelect();
   await reconcileOpenPositions();
@@ -1589,6 +1958,8 @@ async function init(){
   connectWS();
   document.getElementById("levVal").textContent = document.getElementById("levSlider").value + "x";
   updateAll();
+  rebuildEquityChart();
+  updateCandleTimer();
   setInterval(()=>sampleEquity(false), 5000);
 }
 init();

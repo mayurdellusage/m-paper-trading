@@ -91,6 +91,23 @@ header{
 .price-strip .chg{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 6px;border-radius:2px;}
 .price-strip .chg.up{background:rgba(61,220,151,.12);}
 .price-strip .chg.down{background:rgba(255,92,108,.12);}
+.price-strip{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+}
+
+.candle-countdown{
+  color:var(--text-faint);
+  font-size:10px;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+.candle-countdown.live{
+  color:var(--long);
+}
 .tf-tabs{display:flex;gap:2px;margin-left:auto;background:var(--bg-2);border-radius:var(--radius);padding:2px;}
 .tf-tabs button{background:transparent;border:none;color:var(--text-dim);padding:6px 10px;border-radius:2px;font-size:12px;font-weight:600;}
 .tf-tabs button.active{background:var(--bg-3);color:var(--text);}
@@ -119,10 +136,64 @@ header{
 .modal{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:18px;width:300px;box-shadow:0 12px 40px rgba(0,0,0,.5);}
 .modal h3{margin:0 0 14px;font-size:14px;font-weight:800;}
 .modal .field label{font-size:10.5px;color:var(--text-faint);}
+.field select{
+  width:100%;
+  background:var(--bg-1);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  color:var(--text);
+  padding:7px 8px;
+  font-family:var(--mono);
+  font-size:12.5px;
+}
+
+.field select:focus{
+  outline:none;
+  border-color:var(--focus);
+}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
 .modal-actions .mini-btn{padding:7px 12px;}
 .modal-actions .submit-btn{width:auto;padding:8px 16px;margin-top:0;}
 .modal .row2{grid-template-columns:1fr 1fr;}
+.equity-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+
+.equity-title{
+  color:var(--text-dim);
+  font-size:11px;
+  font-weight:700;
+}
+
+.equity-title span{
+  margin-left:10px;
+  font-family:var(--mono);
+  color:var(--text);
+}
+
+.equity-chart-switch{
+  display:flex;
+  gap:2px;
+  background:var(--bg-2);
+  padding:2px;
+}
+
+.equity-chart-switch button{
+  border:0;
+  background:transparent;
+  color:var(--text-dim);
+  padding:5px 10px;
+  font-size:10px;
+  font-weight:700;
+}
+
+.equity-chart-switch button.active{
+  background:var(--bg-3);
+  color:var(--text);
+}
 
 .chart-col{
   background:var(--bg-1);
@@ -259,7 +330,7 @@ tbody tr:hover{background:var(--bg-2);}
 .pill{display:inline-block;padding:1px 7px;border-radius:2px;font-weight:700;font-size:10.5px;}
 .pill.LONG{background:rgba(61,220,151,.14);color:var(--long);}
 .pill.SHORT{background:rgba(255,92,108,.14);color:var(--short);}
-.mini-btn{background:var(--bg-3);border:1px solid var(--line);color:var(--text-dim);border-radius:2px;padding:3px 8px;font-size:10.5px;font-weight:600;margin-left:4px;}
+.mini-btn{background:var(--bg-3);border:1px solid var(--line);color:var(--text-dim);border-radius:2px;padding:6px 9px;font-size:10.5px;font-weight:600;margin-left:4px;}
 .mini-btn:hover{color:var(--text);border-color:var(--focus);}
 .mini-btn.danger:hover{color:var(--short);border-color:var(--short-dim);}
 .empty-row td{text-align:center;color:var(--text-faint);padding:26px 0;font-family:var(--sans);}
@@ -290,8 +361,13 @@ tbody tr:hover{background:var(--bg-2);}
       <button data-symbol="ETHUSDT">ETHUSDT</button>
     </div>
     <div class="price-strip">
-      <span class="last mono" id="lastPrice">—</span>
-      <span class="chg mono" id="priceChg">—</span>
+      <div>
+        <span class="last mono" id="lastPrice">—</span>
+        <span class="chg mono" id="priceChg">—</span>
+      </div>
+      <div class="candle-countdown mono" id="candleCountdown">
+        Candle closes in —
+      </div>
     </div>
     <div class="tf-tabs" id="tfTabs">
       <button data-tf="1m">1m</button>
@@ -312,10 +388,6 @@ tbody tr:hover{background:var(--bg-2);}
     <div class="chart-pnl-badge" id="chartPnlBadge"><span class="lbl">Open P&amp;L</span><span id="chartPnlValue">—</span></div>
     <div class="pick-hint" id="pickHint">Click a price on the chart to set it</div>
     <div id="price-chart"></div>
-    <div class="chart-trade-btns" id="chartTradeBtns">
-      <button data-side="LONG" id="chartBuyBtn">BUY / LONG</button>
-      <button data-side="SHORT" id="chartSellBtn">SELL / SHORT</button>
-    </div>
   </div>
 
   <div class="side-col">
@@ -418,9 +490,22 @@ tbody tr:hover{background:var(--bg-2);}
       </table>
     </div>
 
-    <div class="tab-view" id="view-equity" style="display:none;padding-top:10px;">
-      <div id="equity-chart" style="width:100%;height:150px;"></div>
+    <div id="view-equity" style="display:none;padding-top:10px;">
+
+  <div class="equity-toolbar">
+    <div class="equity-title">
+      EQUITY CURVE
+      <span id="equityCurrentValue">—</span>
     </div>
+
+    <div class="equity-chart-switch">
+      <button id="equityLineBtn" class="active">LINE</button>
+      <button id="equityCandleBtn">CANDLES</button>
+    </div>
+  </div>
+
+  <div id="equity-chart" style="width:100%;height:150px;"></div>
+</div>
   </div>
 
 </div>
@@ -431,7 +516,18 @@ tbody tr:hover{background:var(--bg-2);}
     <div class="field"><label>Account name</label><input type="text" id="newAcctName" placeholder="e.g. Scalping BTC"></div>
     <div class="row2">
       <div class="field"><label>Starting balance</label><input type="number" id="newAcctBalance" value="100000" min="1" step="100"></div>
-      <div class="field"><label>Currency symbol</label><input type="text" id="newAcctCurrency" value="$" maxlength="4"></div>
+      <div class="field"><label>Currency symbol</label><select id="newAcctCurrency">
+        <option value="$">$ — USD</option>
+        <option value="€">€ — EUR</option>
+        <option value="£">£ — GBP</option>
+        <option value="₹">₹ — INR</option>
+        <option value="¥">¥ — JPY/CNY</option>
+        <option value="₽">₽ — RUB</option>
+        <option value="₩">₩ — KRW</option>
+        <option value="₺">₺ — TRY</option>
+        <option value="CHF">CHF</option>
+        <option value="RON">RON</option>
+      </select></div>
     </div>
     <div class="modal-actions">
       <button class="mini-btn" id="newAcctCancel">Cancel</button>
@@ -440,7 +536,9 @@ tbody tr:hover{background:var(--bg-2);}
   </div>
 </div>
 
+
 <script>
+  
 (function(){
 "use strict";
 
@@ -466,12 +564,50 @@ let symbolMeta = {
 };
 
 /* ================= UI STATE ================= */
-let ui = {
-  symbol: "BTCUSDT",
-  tf: "5m",
-  side: "LONG",
-  tab: "positions"
-};
+const UI_PREFS_KEY = "paperExchange.uiPreferences.v1";
+
+function loadUIPreferences(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(UI_PREFS_KEY) || "{}");
+
+    return {
+      symbol: SYMBOLS.includes(saved.symbol) ? saved.symbol : "BTCUSDT",
+      tf: TF_MS[saved.tf] ? saved.tf : "5m",
+      side: saved.side === "SHORT" ? "SHORT" : "LONG",
+      tab: ["positions","history","equity"].includes(saved.tab)
+        ? saved.tab
+        : "positions",
+      theme: saved.theme === "light" ? "light" : "dark",
+      terminalHeight: Number.isFinite(saved.terminalHeight)
+        ? saved.terminalHeight
+        : 190
+    };
+  }catch(e){
+    return {
+      symbol:"BTCUSDT",
+      tf:"5m",
+      side:"LONG",
+      tab:"positions",
+      theme:"dark",
+      terminalHeight:190
+    };
+  }
+}
+
+function saveUIPreferences(){
+  try{
+    localStorage.setItem(UI_PREFS_KEY, JSON.stringify({
+      symbol:ui.symbol,
+      tf:ui.tf,
+      side:ui.side,
+      tab:ui.tab,
+      theme:ui.theme,
+      terminalHeight:ui.terminalHeight
+    }));
+  }catch(e){}
+}
+
+let ui = loadUIPreferences();
 
 /* ================= ACCOUNT STORAGE ================= */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -549,6 +685,7 @@ function initAccounts(){
     try{ localStorage.setItem(ACTIVE_ACCOUNT_KEY, acc.id); }catch(e){}
     return acc;
   }
+  
   let activeId = localStorage.getItem(ACTIVE_ACCOUNT_KEY) || idx[0].id;
   let acc = loadAccount(activeId);
   if(!acc){ activeId = idx[0].id; acc = loadAccount(activeId) || freshAccount(idx[0].name, DEFAULT_STARTING_BALANCE, idx[0].currencySymbol); persistAccountBlob(acc); }
@@ -583,6 +720,24 @@ function populateAccountSelect(){
     `<option value="${a.id}" ${a.id===account.id?"selected":""}>${escapeHtml(a.name)} (${escapeHtml(a.currencySymbol)})</option>`
   ).join("");
 }
+try{
+  equityChartType =
+    localStorage.getItem("paperExchange.equityChartType.v1") || "line";
+}catch(e){}
+
+document.getElementById("equityLineBtn").addEventListener("click",()=>{
+  setEquityChartType("line");
+
+  document.getElementById("equityLineBtn").classList.add("active");
+  document.getElementById("equityCandleBtn").classList.remove("active");
+});
+
+document.getElementById("equityCandleBtn").addEventListener("click",()=>{
+  setEquityChartType("candles");
+
+  document.getElementById("equityCandleBtn").classList.add("active");
+  document.getElementById("equityLineBtn").classList.remove("active");
+});
 
 async function switchAccount(id){
   const next = loadAccount(id);
@@ -633,9 +788,92 @@ const eqChart = LightweightCharts.createChart(document.getElementById("equity-ch
   rightPriceScale:{ borderColor:"#232d3b" },
   timeScale:{ borderColor:"#232d3b", timeVisible:true }
 });
-const eqSeries = eqChart.addAreaSeries({
-  lineColor:"#e8a33d", topColor:"rgba(232,163,61,.25)", bottomColor:"rgba(232,163,61,0)", lineWidth:2
+let equityChartType = "line";
+
+const eqLineSeries = eqChart.addLineSeries({
+  lineWidth:2,
+  priceLineVisible:true,
+  lastValueVisible:true
 });
+
+const eqCandleSeries = eqChart.addCandlestickSeries({
+  upColor:"#3ddc97",
+  downColor:"#ff5c6c",
+  borderVisible:false,
+  wickUpColor:"#3ddc97",
+  wickDownColor:"#ff5c6c"
+});
+
+eqCandleSeries.applyOptions({
+  visible:false
+});
+
+function buildEquityCandles(){
+  const hist = account.equityHistory || [];
+
+  if(!hist.length) return [];
+
+  const buckets = {};
+
+  hist.forEach(p=>{
+    // One candle per minute.
+    const bucket = Math.floor(p.t / 60) * 60;
+
+    if(!buckets[bucket]){
+      buckets[bucket] = {
+        time:bucket,
+        open:p.v,
+        high:p.v,
+        low:p.v,
+        close:p.v
+      };
+    }else{
+      const c = buckets[bucket];
+      c.high = Math.max(c.high,p.v);
+      c.low = Math.min(c.low,p.v);
+      c.close = p.v;
+    }
+  });
+
+  return Object.values(buckets).sort((a,b)=>a.time-b.time);
+}
+
+function refreshEquityChart(){
+  const lineData = (account.equityHistory || []).map(p=>({
+    time:p.t,
+    value:p.v
+  }));
+
+  const candleData = buildEquityCandles();
+
+  eqLineSeries.setData(lineData);
+  eqCandleSeries.setData(candleData);
+
+  eqLineSeries.applyOptions({
+    visible:equityChartType === "line"
+  });
+
+  eqCandleSeries.applyOptions({
+    visible:equityChartType === "candles"
+  });
+
+  if(lineData.length || candleData.length){
+    eqChart.timeScale().fitContent();
+  }
+}
+
+function setEquityChartType(type){
+  equityChartType = type;
+
+  try{
+    localStorage.setItem(
+      "paperExchange.equityChartType.v1",
+      equityChartType
+    );
+  }catch(e){}
+
+  refreshEquityChart();
+}
 
 new ResizeObserver(()=>{
   chart.applyOptions({ width:chartEl.clientWidth, height:chartEl.clientHeight });
@@ -712,6 +950,40 @@ function bucketStartSec(tf){
   const ms = TF_MS[tf];
   return Math.floor(Date.now()/ms) * ms / 1000;
 }
+function updateCandleCountdown(){
+  const el = document.getElementById("candleCountdown");
+  if(!el) return;
+
+  const ms = TF_MS[ui.tf];
+  if(!ms){
+    el.textContent = "Candle closes in —";
+    return;
+  }
+
+  const now = Date.now();
+  const candleStart = Math.floor(now / ms) * ms;
+  const nextClose = candleStart + ms;
+  let remaining = Math.max(0, nextClose - now);
+
+  const totalSeconds = Math.floor(remaining / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  let text;
+
+  if(hours > 0){
+    text = `${hours}h ${String(minutes).padStart(2,"0")}m ${String(seconds).padStart(2,"0")}s`;
+  }else{
+    text = `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+  }
+
+  el.textContent = "Candle closes in " + text;
+  el.classList.add("live");
+}
+
+setInterval(updateCandleCountdown, 1000);
+updateCandleCountdown();
 
 // Called on EVERY bid/ask tick (not just kline pushes) so the candle visibly
 // grows/moves in real time instead of waiting for the next 1-6s kline message
@@ -1063,11 +1335,50 @@ function closePosition(symbol, fraction, reason, override){
 function reversePosition(symbol){
   const pos = account.positions[symbol];
   if(!pos) return;
+
+  const oldSide = pos.side;
+  const newSide = oldSide === "LONG" ? "SHORT" : "LONG";
+
+  // Save the values before closing.
+  const qty = pos.qty;
+  const leverage = pos.leverage;
+
+  // Close current position.
   closePosition(symbol, 1, "Reverse");
-  ui.side = pos.side==="LONG" ? "SHORT" : "LONG";
-  document.querySelectorAll(".side-toggle button").forEach(b=> b.classList.toggle("active", b.dataset.side===ui.side));
-  document.getElementById("qtyInput").value = fmtQty(symbol,pos.qty);
+
+  // Prepare the opposite position.
+  ui.symbol = symbol;
+  ui.side = newSide;
+
+  document.querySelectorAll(".symbol-tabs button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.symbol === symbol);
+  });
+
+  document.querySelectorAll(".side-toggle button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.side === newSide);
+  });
+
+  document.getElementById("levSlider").value = leverage;
+  document.getElementById("levVal").textContent = leverage + "x";
+  document.getElementById("qtyInput").value = qty;
+  document.getElementById("slInput").value = "";
+  document.getElementById("tpInput").value = "";
+
+  saveUIPreferences();
   refreshOrderPreview();
+
+  // Actually open the reverse position.
+  setTimeout(()=>{
+    const preview = computeOrderPreview();
+
+    if(preview.valid){
+      placeOrder();
+    }else{
+      document.getElementById("orderWarn").textContent =
+        "Position closed, but reverse order could not be opened: " +
+        (preview.reason || "unknown error");
+    }
+  }, 0);
 }
 
 function checkSlTp(symbol){
@@ -1409,6 +1720,7 @@ document.getElementById("symbolTabs").addEventListener("click", async (e)=>{
   const btn = e.target.closest("button[data-symbol]");
   if(!btn) return;
   ui.symbol = btn.dataset.symbol;
+  saveUIPreferences();
   setPickMode(null);
   document.querySelectorAll("#symbolTabs button").forEach(b=>b.classList.toggle("active", b===btn));
   await refreshChart();
@@ -1419,6 +1731,7 @@ document.getElementById("tfTabs").addEventListener("click", async (e)=>{
   const btn = e.target.closest("button[data-tf]");
   if(!btn) return;
   ui.tf = btn.dataset.tf;
+  saveUIPreferences();
   setPickMode(null);
   document.querySelectorAll("#tfTabs button").forEach(b=>b.classList.toggle("active", b===btn));
   await refreshChart();
@@ -1464,10 +1777,25 @@ document.getElementById("chartSellBtn").addEventListener("click", ()=> chartQuic
 document.getElementById("positionsBody").addEventListener("click",(e)=>{
   const btn = e.target.closest("button[data-act]");
   if(!btn) return;
+
   const symbol = btn.dataset.symbol;
-  if(btn.dataset.act==="close") closePosition(symbol,1,"Manual close");
-  else if(btn.dataset.act==="half") closePosition(symbol,0.5,"Partial close");
-  else if(btn.dataset.act==="reverse") reversePosition(symbol);
+  const action = btn.dataset.act;
+
+  if(!account.positions[symbol]){
+    return;
+  }
+
+  if(action === "close"){
+    closePosition(symbol, 1, "Manual close");
+  }
+
+  if(action === "half"){
+    closePosition(symbol, 0.5, "Partial close");
+  }
+
+  if(action === "reverse"){
+    reversePosition(symbol);
+  }
 });
 
 document.querySelector(".tabbar").addEventListener("click",(e)=>{
